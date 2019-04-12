@@ -1,0 +1,163 @@
+apply plugin: "com.android.application"
+
+import com.android.build.OutputFile
+
+project.ext.react = [
+    entryFile: "index.js"
+]
+
+apply from: "../../node_modules/react-native/react.gradle"
+
+
+def enableSeparateBuildPerCPUArchitecture = false
+
+/**
+ * Run Proguard to shrink the Java bytecode in release builds.
+ */
+def enableProguardInReleaseBuilds = false
+
+android {
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.baoxian"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 40
+        versionName "2.0.3"
+        vectorDrawables.useSupportLibrary = true
+        ndk {
+            abiFilters "armeabi-v7a", "x86"
+            // 设置支持的SO库架构
+            abiFilters 'armeabi' //, 'x86', 'armeabi-v7a', 'x86_64', 'arm64-v8a'
+        }
+        multiDexEnabled true
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    configurations {
+        all*.exclude group: 'com.android.support', module: 'support-v4'
+        all*.exclude group: 'com.android.support', module: 'support-annotations'
+
+        // all*.exclude group: 'com.facebook.react', module: 'react-native'
+    }
+    splits {
+        abi {
+            reset()
+            enable enableSeparateBuildPerCPUArchitecture
+            universalApk false  // If true, also generate a universal APK
+            include "armeabi-v7a", "x86"
+        }
+    }
+    signingConfigs {
+        release {
+            storeFile file(MYAPP_RELEASE_STORE_FILE)
+            storePassword MYAPP_RELEASE_STORE_PASSWORD
+            keyAlias MYAPP_RELEASE_KEY_ALIAS
+            keyPassword MYAPP_RELEASE_KEY_PASSWORD
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+        }
+        release {
+            minifyEnabled enableProguardInReleaseBuilds
+            proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
+            signingConfig signingConfigs.release
+        }
+    }
+    lintOptions{
+        checkReleaseBuilds false
+        abortOnError false
+    }
+    // applicationVariants are e.g. debug, release
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            // For each separate APK per architecture, set a unique version code as described here:
+            // http://tools.android.com/tech-docs/new-build-system/user-guide/apk-splits
+            def versionCodes = ["armeabi-v7a":1, "x86":2]
+            def abi = output.getFilter(OutputFile.ABI)
+            if (abi != null) {  // null for the universal-debug, universal-release variants
+                output.versionCodeOverride =
+                        versionCodes.get(abi) * 1048576 + defaultConfig.versionCode
+            }
+        }
+    }
+    dexOptions {
+        jumboMode true
+    }
+    project.ext {
+        googlePlayServicesVersion = "+"
+    }
+}
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'libs' //就是你放aar的目录地址
+    }
+}
+
+dependencies {
+    implementation project(':react-native-gesture-handler')
+    implementation project(':rn-fetch-blob')
+    implementation project(':realm')
+    implementation project(':react-native-view-shot')
+    implementation project(':react-native-video')
+    implementation project(':react-native-sound')
+    implementation project(':react-native-shimmer')
+    implementation project(':react-native-qr-scanner')
+    implementation project(':react-native-pdf')
+    implementation project(':react-native-linear-gradient')
+    implementation project(':react-native-image-crop-picker')
+    implementation project(':react-native-i18n')
+    implementation project(':react-native-ftp')
+    implementation project(':react-native-fs')
+    implementation project(':react-native-doc-viewer')
+    implementation project(':react-native-device-info')
+    // implementation project(':react-native-camera')
+    implementation (project(':react-native-camera')) {
+        exclude group: "com.android.support"
+    }
+    implementation project(':react-native-audio')
+    implementation project(':react-native-agora')
+    implementation project(':lottie-react-native')
+    implementation 'com.facebook.fresco:fresco:1.10.0'
+    implementation 'com.facebook.fresco:animated-base:1.10.0'
+    implementation 'com.facebook.fresco:animated-gif:1.10.0'
+    implementation 'com.facebook.fresco:animated-webp:1.1.0'
+    implementation 'com.facebook.fresco:webpsupport:1.1.0'
+    implementation project(':react-native-svg')
+    compile 'com.facebook.fresco:animated-base-support:1.1.0'
+    implementation project(':ReactAndroid')
+
+    implementation fileTree(dir: "libs", include: ["*.jar"])
+    implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
+    // implementation "com.facebook.react:react-native:+"
+
+    implementation "com.android.support:exifinterface:+"
+    implementation "com.android.support:support-annotations:+"
+    implementation "com.android.support:support-v4:+"
+    implementation 'com.tencent.bugly:crashreport:latest.release' //其中latest.release指代最新Bugly SDK版本号，也可以指定明确的版本号，例如2.1.9
+    implementation 'com.tencent.bugly:nativecrashreport:latest.release' //其中latest.release指代最新Bugly NDK版本号，也可以指定明确的版本号，例如3.0
+}
+
+//消除Xlint报错
+allprojects {
+    gradle.projectsEvaluated {
+        tasks.withType(JavaCompile) {
+            options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+        }
+    }
+}
+
+// Run this once to be able to run the application with BUCK
+// puts all compile dependencies into folder libs for BUCK to use
+task copyDownloadableDepsToLibs(type: Copy) {
+    from configurations.compile
+    into 'libs'
+}
